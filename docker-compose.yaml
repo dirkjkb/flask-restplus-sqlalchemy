@@ -1,0 +1,31 @@
+version: '3.6'
+services:
+
+    flask:
+        container_name: flask
+        build: ./flask
+        restart: always
+        ports:
+            - 5000:5000
+        environment: 
+            DB_USER: postgres
+            DB_PASSWORD: password
+            DB_NAME: postgres
+            DB_HOST: postgres
+            DB_PORT: 5432
+
+    postgres:
+        container_name: postgres
+        image: postgres:12.3-alpine
+        restart: always
+        volumes:
+            - db_data:/var/lib/postgresql/data
+            - ./postgresql/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+        ports: 
+            - 5432:5432
+
+volumes:
+    db_data:
