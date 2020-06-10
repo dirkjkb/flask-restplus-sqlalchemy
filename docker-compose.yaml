@@ -8,9 +8,9 @@ services:
         ports:
             - 5000:5000
         environment: 
-            DB_USER: postgres
+            DB_USER: docker
             DB_PASSWORD: password
-            DB_NAME: postgres
+            DB_NAME: flask
             DB_HOST: postgres
             DB_PORT: 5432
 

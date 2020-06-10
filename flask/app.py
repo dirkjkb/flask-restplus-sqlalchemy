@@ -1,51 +1,47 @@
-import argparse
 import logging
+import os
 
-from pathlib import PurePath, Path
+from pathlib import PurePath
 from flask import Flask
 from logging.config import fileConfig
 from flask_restplus import Api
-from waitress import serve
 
 from api.product import api as api_products
 from data import db
 
 _logger = logging.getLogger()
 
-parser = argparse.ArgumentParser('Database connection variables')
-parser.add_argument('--db_user', type=str, default='docker')
-parser.add_argument('--db_password', type=str, default='password')
-parser.add_argument('--db_name', type=str, default='flask')
-parser.add_argument('--db_host', type=str, default='localhost')
-parser.add_argument('--db_port', type=str, default='5432')
-
 
 class App(object):
 
     def __init__(self):
+        self.db_user = os.getenv('DB_USER', 'docker')
+        self.db_password = os.getenv('DB_PASSWORD', 'password')
+        self.db_name = os.getenv('DB_NAME', 'postgres')
+        self.db_host = os.getenv('DB_HOST', 'localhost')
+        self.db_port = os.getenv('DB_PORT', '5432')
         self.api = Api(
             version='1.0',
             prefix='/api/v1',
             doc='/swagger',
-            title='Todo API',
-            description='A simple TODO API'
+            title='Product API',
+            description='A simple product api'
         )
 
     def logger_init(self) -> None:
-        path = PurePath.joinpath(Path.cwd(), "logging_config.ini")
+        path = PurePath.joinpath(PurePath(__file__).parent, 'logging_config.ini')
         fileConfig(path)
         _logger.info(f'logger initialized with config: {path}')
 
-
-    def create_app(self, params: object) -> Flask:
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        url = f"postgresql://{params.db_user}:{params.db_password}@{params.db_host}:{params.db_port}/{params.db_name}"
-        app.config['SQLALCHEMY_DATABASE_URI'] = url
-        self.register_extensions(app)
-        self.register_api(app)
+    def create_app(self) -> Flask:
+        flask_app = Flask(__name__)
+        flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        url = f'postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}'
+        flask_app.config['SQLALCHEMY_DATABASE_URI'] = url
+        self.register_extensions(flask_app)
+        self.register_api(flask_app)
         _logger.info(f'app created')
-        return app
+        return flask_app
 
     def register_extensions(self, app_definition: Flask) -> None:
         db.init_app(app_definition)
@@ -59,10 +55,10 @@ class App(object):
             db.create_all()
 
 
+main = App()
+main.logger_init()
+app = main.create_app()
+main.setup_database(app)
+
 if __name__ == '__main__':
-    main = App()
-    args = parser.parse_args()
-    main.logger_init()
-    app = main.create_app(args)
-    main.setup_database(app)
-    serve(app, listen='0.0.0.0:5000')
+    app.run(host='127.0.0.1', port=5000)
